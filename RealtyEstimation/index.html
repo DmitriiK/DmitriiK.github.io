@@ -163,8 +163,8 @@
   function updateMapImage() {
   
     var bounds = new google.maps.LatLngBounds(swBound, neBound);
-    var srcImage = "/ImagesToOverlay/apts1.txt.phantom.1000.png"; /* url_base + ".png";*/
-    var metadata_url = "/ImagesToOverlay/apts1.txt.phantom.1000.metadata.json";  // url_base + ".metadata.json";
+    var srcImage = "./ImagesToOverlay/apts1.txt.phantom.1000.png"; /* url_base + ".png";*/
+    var metadata_url = "./ImagesToOverlay/apts1.txt.phantom.1000.metadata.json";  // url_base + ".metadata.json";
     fetch(metadata_url, function(response) {
       metadata = JSON.parse(response);
       document.getElementById("n").innerHTML = metadata.n ? metadata.n : "n/a";
