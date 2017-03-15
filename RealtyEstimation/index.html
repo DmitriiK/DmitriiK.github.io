@@ -48,11 +48,24 @@
 
   var metadata = {};
 
-        //AIzaSyBkTzW-6zpbkva1nXO4fnzc8TnD7kZrxR0       
+        //AIzaSyBkTzW-6zpbkva1nXO4fnzc8TnD7kZrxR0    
+        /*
+# SARATOV + ENGELS
+MIN_LAT= 51.398221 
+MAX_LAT=51.625529
+MIN_LON=45.855492
+MAX_LON=46.221607 
+  var swBound = new google.maps.LatLng(51.398221, 45.855492);
+  var neBound = new google.maps.LatLng(51.625529, 46.221607 );
+# SARATOV
+#MIN_LAT=51.462828
+#MAX_LAT=51.625529
+#MIN_LON=45.855492
+#MAX_LON=46.132330
+*/
 
-
-  var swBound = new google.maps.LatLng(51.462828, 45.855492);
-  var neBound = new google.maps.LatLng(51.625529, 46.132330);
+  var swBound = new google.maps.LatLng(51.398221, 45.855492);
+  var neBound = new google.maps.LatLng(51.625529, 46.221607);
 
   var currentOverlayImg;
 
@@ -66,7 +79,11 @@
       mapTypeId: google.maps.MapTypeId.ROADMAP
     };
     map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-
+    google.maps.event.addListener(map, 'bounds_changed', function () {
+        console.log(map.getBounds());
+        console.log(map.getZoom());
+        console.log(map.getCenter());
+    });
     google.maps.event.addListener(map, 'click', function (e) {
       var loc = e.latLng;
 
@@ -109,6 +126,7 @@
 
     updateMapImage();
     setLegendValues();
+
   }
 
     
@@ -147,7 +165,7 @@
     xhr.send();
   }
 
-  function updateMapImage() {
+ function updateMapImage() {
   
     var bounds = new google.maps.LatLngBounds(swBound, neBound);
     var srcImage = "./ImagesToOverlay/apts1.txt.phantom.1000.png"; /* url_base + ".png";*/
