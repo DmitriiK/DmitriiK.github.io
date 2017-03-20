@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+	<meta charset="utf-8" />
+</head>
+<body>
+    <h1>Введение.</h1>
+    Начну с конца.
+    Это скриншот с некой web-карты, визуализирующей среднюю стоимость недвижимости на вторичном рынке Саратова и Энгельса:
+
+    <img src="https://habrastorage.org/files/e28/b31/420/e28b314201954a63a3ebb18c5e29ce2f.png" />
+
+    Цвета на карте можно соотнести с цветами на "легенде", цвет на "легенде" соответствует средней стоимости квадратного метра общей площади в тысячах рублей.
+    Точка на карте соответствует одному предложению по продаже (на вторичном рынке) квартиры с <a href="https://www.avito.ru/saratov/kvartiry/prodam">авито</a>.  Всего таких точек, как видно на «легенде», для построения графика использовалось 4943.
+    Карта в интерактивном виде доступна по ссылке <a href="https://dmitriik.github.io/RealtyEstimation/">https://dmitriik.github.io/RealtyEstimation/</a>
+
+    <h1>А теперь немного предыстории..</h1>
+    Давным-давно...
+    <habracut />
+    ..когда будучи студентом мехмата я писал работу по статистической обработке данных по ценам на недвижимость, я случайно нашел полезный документ,  - градация районов по ценам на недвижимость, что то вроде “Ценовые зоны Саратова”.  Не знаю, кто ее составлял, но составлена она была правдоподобно, - анализ показал, что (если учесть другие факторы), разница между средней  стоимостью квадратного метра квартир из соседних ценовых зон составляла примерно 10%.  С тех выступать в роли оценщика недвижимости (на бытовом уровне), как и большинству взрослых людей, приходилось не раз.
+
+    Идея снова подойти к этому вопросу более “научно” пришла в голову когда я увидел публикацию Jeff Kaufman <a href="https://www.jefftk.com/p/updated-boston-apartment-price-maps">Boston Apartment Price Maps</a>.
+    Товарищ сделал следующее:
+    <ul>
+        <li>  Python скрипт, который парсит с сайта <a href="https://www.padmapper.com">PadMapper</a> данные по стоимости аренды недвижимости.</li>
+        <li>еще скрипт, который используя методы Spatial interpolation, визуализирует эти данные в виде растрового изображения. </li>
+        <li>Наложил этот рисунок <a href="https://www.jefftk.com/apartment_prices/">на страничку с Google Maps</a> </li>
+    </ul>(Исходники и данные - здесь - <a href="https://github.com/jeffkaufman/apartment_prices">https://github.com/jeffkaufman/apartment_prices</a>)
+
+    В результате у него получилась такая интерактивная карта распределения стоимости аренды на карте <a href="https://www.youtube.com/watch?v=x-64CaD8GXw">Бостон</a>-а:
+    <img src="https://habrastorage.org/files/e0e/8d5/f31/e0e8d5f31cfa423ab47c1477ef57b562.png" />
+
+    После первого “Вау, прикольно”, следующая мысль - “А что если попробовать сделать такое же, но для России, только не по стоимости аренды, а по ценам на квадрат недвижимости”.
+    Сразу оговорюсь, я, по текущему роду деятельности, скорее database developer, и не являюсь специалистом ни по GIS данным, ни по front-end разработке, ни по статистике, ни по Python, поэтому отнеситесь снисходительно к .. еще не знаю к чему, но надеюсь этого будет не очень много и вы мне об этом напишете для исправления.
+    И здесь возникает первая крупная задача
+
+    <h1>Web Scraping с Авито. </h1>
+    Так как с Python-ом на тот момент я был совсем на “вы”, после изучения HTML кода страниц Авито, свой собственный велосипед я решил написать в виде библиотеки на C#, используя для парсинга  <a href="https://anglesharp.github.io/">AngleSharp</a>.
+    Не буду сейчас углубляться в особенности реализации, замечу только что:
+    <ul>
+        <li> все метаданные парсинга авито я вынес в отдельный конфигурационный класс, чтобы в будущем, при изменении структуры разметки на Авито, можно было бы просто изменить строку в конфигурационном файле.</li>
+        <li>  дабы избежать бана от Авито, пришлось добавлять искусственные задержки в 10 секунд после обработки каждого объявления. (Согласен, - не самый умный способ, но найти подходящий пул прокси -айпишников навскидку не удалось).</li>
+    </ul>
+    В конечном итоге, запустив парсилку на ночь, я получил нужные данные, записанные в табличку в базе
+
+    <img src="https://habrastorage.org/files/5e3/e04/80a/5e3e0480ad4140e0a9b5c40d1763eefb.png" />
+
+    Очистив данные от “Старого фонда”,  “Элитных”, и всяких явно неадекватных предложений, я получил выборку из пяти тысяч точек - продажи квартир на вторичном рынке Саратова и Энгельса. И это дало возможность перейти к следующему шагу:
+
+    <h1>Обработка GIS данных.</h1>
+    Общая постановка задачи
+    - есть дискретный набор значений некой метрики(температура, высота, концентрация вещества и т.п), с привязкой к координатам на плоскости (X, Y или широта, долгота),
+    - нужно  иметь возможность предсказать значение этой метрики в произвольной точке этой плоскости,
+    - результат визуализируется в виде цветовой схемы на плоскости. Для цветовой схемы для удобства можно дискретизировать цвета.
+    Пример, - сняли в один момент  показания с датчиков температуры в разных местах, обработали, получили такую картинку:
+    <img src="https://docs.qgis.org/2.2/en/_images/temperature_map.png" />
+
+    На самом деле, задачи такого рода требуют погружения в тему “<a href="http://www.bisolutions.us/A-Brief-Introduction-to-Spatial-Interpolation.php">Spatial interpolation</a>”.   Здесь есть свой математический аппарат, например
+    - <a href=" http//gisgeography.com/inverse-distance-weighting-idw-interpolation/">Inverse Distance Weighting (IDW) Interpolation </a>
+    - <a href="https://en.wikipedia.org/wiki/Kriging">Kriging</a>
+    И есть свой инструментарий в составе популярных GIS пакетов, например
+    - <a href="http://www.qgistutorials.com/ru/docs/interpolating_point_data.html ">Интерполяция точечных данных qGIS</a>
+    - <a href="http://npk-kaluga.ru/GeoStatAnalyze_AGIS.htm "> GeoStatistical Analyst ArcGIS </a> -
+    - <a href="http://www.dmcsee.org/uploads/file/337_4_saga_kriging_manual.pdf"> Use of SAGA GIS for spatial interpolation(kriging) </a>
+    - <a href="https://rpubs.com/nabilabd/118172">Kriging in R </a>.
+
+    IDW в составе qGIS (см первую из ссылок) я попробовал, - результат меня не удовлетворил.
+
+    <img src="https://habrastorage.org/files/5af/8dd/0c1/5af8dd0c12f342e7849ba30b747497a1.png" />
+
+    Поэтому, чтобы не завязнуть надолго в освоении нового инструментария, я предпочел воспользоваться <a href=" https//github.com/jeffkaufman/apartment_prices">готовым  Рython скриптом от Jeff Kraufman </a>.  Для расчета расстояний и для трансляции GPS координат в X,Y координаты на растре здесь применяется упрощенная линейная формула, без применения <a href="https://en.wikipedia.org/wiki/Web_Mercator">используемой в Google MapsWeb Mercator проекции</a>.
+
+    Насколько я понял, в скрипте используется вариация на тему Inverse Distance Weighting (IDW) , главная (и самая тяжеловесная по расчетной части) в этом скрипте часть здесь в этом коде.
+    <spoiler title="Python код spatial interpolation">
+        <source lang="python">gaussian_variance = IGNORE_DIST/2
+        gaussian_a = 1 / (gaussian_variance * math.sqrt(2 * math.pi))
+        gaussian_negative_inverse_twice_variance_squared = -1 / (2 * gaussian_variance * gaussian_variance)
+
+        def gaussian(prices, lat, lon, ignore=None):
+        num = 0
+        dnm = 0
+        c = 0
+
+        for price, plat, plon, _ in prices:
+        if ignore:
+        ilat, ilon = ignore
+        if distance_squared(plat, plon, ilat, ilon) < 0.0001:
+        continue
+
+        weight = gaussian_a * math.exp(distance_squared(lat,lon,plat,plon) *
+        gaussian_negative_inverse_twice_variance_squared)
+
+        num += price * weight
+        dnm += weight
+
+        if weight > 2:
+        c += 1
+
+        # don't display any averages that don't take into account at least five data points with significant weight
+        if c < 5:
+        return None
+
+        return num/dnm
+        def distance_squared(x1,y1,x2,y2):
+        return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)</source>
+    </spoiler>
+    Подогнал свой массив данных под нужный формат, убрал из скрипта ту часть, которая делает расчет корреляций относительно bedroom_category (количество комнат), поигрался с входными параметрами, запустил расчет.  На моем компе (Intel(R) Core(TM) i7-6700 CPU, 16GB RAM), расчет с 5 тыс точек на входе и разрешением изображения на выходе 1000*1000 занял примерно полчаса.
+
+    Осталось немного поработать с Front-End -ом.  Смотрим <a href="HTML source   карты Бостона ">HTML source   карты Бостона </a>от Jeff Kraufman. Немного видоизменяем его под свои данные, и получаем вот такую "картину маслом"
+
+    <img src="https://habrastorage.org/files/389/d5c/5e9/389d5c5e95114cb4b9619bfe751c27d7.png" />
+
+    Для проверки на явные “косяки” в <a href="https://en.wikipedia.org/wiki/Georeferencing">Georeferencing</a> загружаем тот же набор точек в qGIS, подгружаем ГуглоКарты, сравниваем картинки.
+
+    <img src="https://habrastorage.org/files/052/1b7/720/0521b77200284b238dffc5fd03a899e3.png" />
+
+    Убедившись, что точки на нарисованной карте находятся на своих местах, а цвета на ней правдоподобно отражают цены на квартиры в нашей деревне, можем выдохнуть -         “Yes! Работает!”
+    Только вот немного огорчает, что картинка у нас залезла в Волгу. Что  естественно, - алгоритм расчета ничего про Волгу не знает.
+    Стало быть возникает задача:
+
+    <h1>Обрезать изображение на карте по береговой линии</h1>
+    Попытка найти гео-данные по административным границам городов с учетом береговой линии не увенчалась успехом. Есть Саратов, есть Энгельс, и граница между ними проходит посреди Волги.  Ладно, мы пойдем другим путем.
+
+    Скачиваем из открытых источников <a href="https://ru.wikipedia.org/wiki/Shapefile">shape </a>file  c данными по береговым линиям, загружаем как векторный слой в qGIS, выбираем нужные полигоны, разбираемся в структуре файлов, вытаскиваем полигоны, которые относятся к Волге у Саратова, заливаем данные в БД.
+    Немного <a href="https://msdn.microsoft.com/en-us/library/cc280766.aspx">магии  </a> типа
+    <source lang="sql"> DECLARE @Volga geography;
+    select @Volga= PlacePolygon.MakeValid()   from PlacesPolygons where PlacesPolygonID =1003
+    DECLARE  @Saratov geography;
+    select @Saratov= PlacePolygon.MakeValid()   from PlacesPolygons where PlacesPolygonID =2
+    select @Saratov.STDifference(@Volga)</source>
+    и мы получаем нужный полигон - границы города с учетом береговой лини.
+
+    Остается загрузить это в qGIS, загрузить туда же сгенерированную скриптом картинку как растровый слой, провести Georeferencing для этой картинки,  и обрезать ее по полигону с границами городов, все стандартными средства qGIS.   Все было бы здорово если бы.. мне это удалось сделать. Но увы.. с <a href="http://www.qgistutorials.com/en/docs/advanced_georeferencing.html">Georeferencing  в qGIS</a> у меня отношения не сложились, и после нескольких попыток я решил,  что используя spatial функции из  Microsoft.SqlServer.Types,  проще быстренько сделать очередной велосипед в виде утилиты на шарпе.
+
+    <spoiler title="C# код для обрезки рисунка по GEO полигону">
+        <source lang="cs">
+        string GPSPolygonVolga = "    POLYGON ((46.2324447632 51…. ))";
+        private void CropByGPS()
+        {
+        Bitmap bmp = new Bitmap(inputFilePath);
+        int w = bmp.Width;
+        int h = bmp.Height;
+        var GpsSizeOfPyxelX = (MAX_LON - MIN_LON) / w;
+        var GpsSizeOfPyxelY = (MAX_LAT - MIN_LAT) / h;
+        var VolgaPolygon = SqlGeography.STPolyFromText(new System.Data.SqlTypes.SqlChars(GPSPolygonVolga), SRID);
+        for (int y = 0; y < h; y++)
+        {
+        for (int x = 0; x < w; x++)
+        {
+        Color c = bmp.GetPixel(x, y);
+        var GPS = SqlGeography.Point(MAX_LAT - GpsSizeOfPyxelY * y, MIN_LON + GpsSizeOfPyxelX * x, SRID);
+        if (VolgaPolygon.STContains(GPS)) //попадает ли точка в "водяной" полигон
+        bmp.SetPixel(x, y, Color.Transparent);
+        }
+        }
+        bmp.Save(outputFilePath, System.Drawing.Imaging.ImageFormat.Png);
+        }</source>
+    </spoiler>
+    Загрузили исходный файл с растром, получили на выходе тот же файл, но в немного “обкусанном виде”. Наложили на Google Maps в браузере, смотрим, - на Волгу ничего не залезает, отлично! Смотрим чуть внимательнее и видим.. что кажется кое-где откусили лишнее. Косяк в данных или косяк в процедуре?  Снова смотрим на загруженные слои в qGIS.
+
+    <img src="https://habrastorage.org/files/519/628/700/51962870076b47b2ad8693ee68707dd0.png" />
+
+    Да.. действительно, кое где у нас порой..  полигоны из слоя водоема явно залезает в город. Прям не Энгельс, а Венеция какая то..
+    Ладно, нет стремления к совершенству, мы пойдем другим путем.
+
+    Раз векторные данные вышли из доверия, будем работать с растровыми. Нам нужно наложить две картинки, и вырезать из первой те точки, которые соответствуют “голубому” во второй.
+    Картинку с картой нам могут дать, например <a href=" https//developers.google.com/maps/documentation/static-maps/?hl=ru">Google Maps static API</a>.
+    Получаем API_KEY, выясняем, что
+    - максимальное разрешение для бесплатного использования =640*640
+    - параметризации по  <a href="http://wiki.openstreetmap.org/wiki/Bounding_Box">BoundingBox </a>- ,  в отличие от<a href="https://msdn.microsoft.com/en-us/library/ff701724.aspx"> BING static maps API</a>  гугл не поддерживает, и придется дополнительно соотносить два рисунка в координатной плоскости.
+
+    Ладно, пробуем. Получаем от Google Statics Map API некую картинку с картой, покрывающую интересующую нас область, пишем такой код:
+
+    <spoiler title="C# cropping по картинке">
+        <source lang="cs"> private static void CropByMapImage()
+        {
+        Bitmap bmp = new Bitmap(inputFilePath);
+        Bitmap bmpMap = new Bitmap(mapToCompareFilePath);
+        int w = bmp.Width;
+        int h = bmp.Height;
+        var GpsSizeOfPyxelX = (MAX_LON - MIN_LON) / w;
+        var GpsSizeOfPyxelY = (MAX_LAT - MIN_LAT) / h;
+        int wm = bmpMap.Width;
+        int hm = bmpMap.Height;
+        var cntAll = w * h;
+        var cntRiver = 0;
+        for (int y = 0; y < h; y++)
+        {
+        for (int x = 0; x < w; x++)
+        {
+        var currentLatitude = MAX_LAT - GpsSizeOfPyxelY * y;
+        var currentLongitude = MIN_LON + GpsSizeOfPyxelX * x;
+        if (currentLongitude < MIN_LON_M || currentLongitude > MAX_LON_M || currentLatitude < MIN_LAT_M || currentLatitude > MAX_LAT_M) continue; //todo - something with this ugly code
+
+        var CorrespondentX = (int)((currentLongitude - MIN_LON_M) / (MAX_LON_M - MIN_LON_M) * wm);
+        var CorrespondentY = (int)((MAX_LAT_M-currentLatitude) / (MAX_LAT_M - MIN_LAT_M) * hm);
+        Color cp = bmp.GetPixel(x, y); //color of current pixel
+        Color mp = bmpMap.GetPixel(CorrespondentX, CorrespondentY); //color of correspondent Map pixel
+        if  (Math.Max(Math.Max( Math.Abs(mp.R - WaterMapColor.R) , Math.Abs(mp.G - WaterMapColor.G)) , Math.Abs(mp.B -WaterMapColor.B))< colorDiff /* && cp.A != Color.Transparent.A */)// blue water is not always the same blue
+        {
+        bmp.SetPixel(x, y, Color.Transparent);
+        cntRiver++;
+        }
+        }
+        }
+        bmp.Save(outputFilePath, System.Drawing.Imaging.ImageFormat.Png);
+        }</source>
+    </spoiler>
+    Обрабатываем наш файлик с разрешением 1000*1000 с помощью файлика с разрешением 640*640, получаем.... такой результат (здесь для наглядности те точки, которые должны быть Transparent, сделаны желтыми):
+
+    <img src="https://habrastorage.org/files/d3f/839/24c/d3f83924c6b744118a6f404ec62e6020.jpg" />
+
+    Результат - печальный, в том числе еще и потому,  что Гугло карта масштабируется дискретно, и поэтому  с большим запасом перекрывает наш сгенерированный растр. То есть или нужно брать для “обрезки” много карт с подходящим масштабом или.. как то все таки найти одну, но с хорошим разрешением.
+
+    Я - пошел вторым путем, то есть просто за-скриншотил нужную проекцию обычной гугло карты из браузера. GPS координаты углов (mapping bound), я узнал, добавив в JavaScript code такое
+    <source lang="javascript">   google.maps.event.addListener(map, 'bounds_changed', function () {
+    console.log(map.getBounds());</source>
+
+    Обработал наш растр с помощью новой карты из сохраненного скриншота, загрузил в браузер и.. результат меня - скорее порадовал. Достаточно корректно(в пределах точности GPS позиционирования) “зачистился” даже маленький пруд в местном городском парке.
+    <img src="https://habrastorage.org/files/8e4/217/f14/8e4217f1485f49b8ae992bc66f07c704.png" />
+
+    Все, будем считать первый этап квеста завершенным,  заливаем результаты на GitHub в папочку, расшаренную для хостинга,  и можем хвастаться перед IT сообществом.
+    https://dmitriik.github.io/RealtyEstimation/
+
+    <h1>И что дальше?</h1>
+    А дальше возникает много вопросов, на которые я пока не знаю четкого ответа
+    <ul>
+        <li>Насколько корректно работает алгоритм расчета здесь по сравнению с другими методами spatial interpolations</li>
+        <li>Какие еще факторы, кроме расположения объекта недвижимости, имеет смысл учитывать при расчете и как ввести в расчетную модель</li>
+        <li>Можно ли сделать постоянное обновление данных в базе и построить на этом какую то систему оценку недвижимости. (Если меня читают на этом сайте представители Авито, хотелось бы услышать комментарии)</li>
+    </ul>
+    Ну и .. спасибо всем до-читавшим до этого места.
+    Мне было интересно решить практическую задачу, которая оказалась, “rather challenging for me”, надеюсь вам было интересно прочитать о моем опыте.
+
+
+
+  
+
+
+</body>
+</html>
