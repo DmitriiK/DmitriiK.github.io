@@ -168,7 +168,7 @@ MAX_LON=46.221607
  function updateMapImage() {
   
     var bounds = new google.maps.LatLngBounds(swBound, neBound);
-    var srcImage = "./ImagesToOverlay/apts1.txt.phantom.1000.png"; /* url_base + ".png";*/
+    var srcImage = "./ImagesToOverlay/apts1.txt.phantom.1000-2.png"; /* url_base + ".png";*/
     var metadata_url = "./ImagesToOverlay/apts1.txt.phantom.1000.metadata.json";  // url_base + ".metadata.json";
     fetch(metadata_url, function(response) {
       metadata = JSON.parse(response);
@@ -234,6 +234,8 @@ MAX_LON=46.221607
     </script>
 </head>
 <body onload="initialize()">
+    <h2 style="color:forestgreen">Распределение цен на недвижимость на карте. Саратов, Энгельс.</h2>
+        <i>Данные актуальны на ноябрь 2016 года</i>
     <div id=map-loading>Loading apartment prices and map of Saratov...</div>
     <div id="map_canvas" style="width:100%; height:100%"></div>
     <div id="legend">
