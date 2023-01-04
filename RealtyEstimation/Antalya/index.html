@@ -138,7 +138,7 @@ MAX_LON = 30.857
     if (metadata.buckets) {
       var key_spans = document.getElementsByClassName("key");
       for (var i = 0 ; i < key_spans.length && i < metadata.buckets.length; i++) {
-          key_spans[i].innerHTML = Math.round(metadata.buckets[i]/1000);
+          key_spans[i].innerHTML = Math.round(metadata.buckets[i]);
       }
      
     }
