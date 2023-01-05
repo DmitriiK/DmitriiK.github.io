@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
 <head>
-    <title>Antalya realty rent price Map</title>
+    <title>Izmir realty rent price Map</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <style type="text/css">
         html {
@@ -50,22 +50,23 @@
 
         //AIzaSyBkTzW-6zpbkva1nXO4fnzc8TnD7kZrxR0    
         /*
-# antalya da
-MIN_LAT = 36.825
-MAX_LAT = 36.985
-MIN_LON = 30.572
-MAX_LON = 30.857
+# izmir de
+MIN_LAT = 38.328
+MAX_LAT = 38.545
+MIN_LON = 27.016
+MAX_LON = 27.272
+
 */
 
-  var swBound = new google.maps.LatLng(36.825, 30.572);
-  var neBound = new google.maps.LatLng(36.985, 30.857);
+  var swBound = new google.maps.LatLng(38.328, 27.016);
+  var neBound = new google.maps.LatLng(38.545, 27.272);
 
   var currentOverlayImg;
 
   TQOverlay.prototype = new google.maps.OverlayView();
 
   function initialize() {
-      var latlng = new google.maps.LatLng(36.905, 30.714);
+      var latlng = new google.maps.LatLng(38.436, 27.144);
     var myOptions = {
       zoom: 13,
       center: latlng,
@@ -155,15 +156,14 @@ MAX_LON = 30.857
       }
     };
     xhr.open("GET",url,true);
-    xhr.setRequestHeader('Access-Control-Allow-Origin', '*')
     xhr.send();
   }
 
  function updateMapImage() {
   
     var bounds = new google.maps.LatLngBounds(swBound, neBound);
-    var srcImage = "./ImagesToOverlay/antalya_output.1000.png"; /* url_base + ".png";*/
-    var metadata_url = "./ImagesToOverlay/Antalya_output.1000.metadata.json";  // url_base + ".metadata.json";
+    var srcImage = "./ImagesToOverlay/output.phantom.1000.png"; /* url_base + ".png";*/
+    var metadata_url = "./ImagesToOverlay/output.phantom.1000.metadata.json";  // url_base + ".metadata.json";
     fetch(metadata_url, function(response) {
       metadata = JSON.parse(response);
       document.getElementById("n").innerHTML = metadata.n ? metadata.n : "n/a";
@@ -228,7 +228,7 @@ MAX_LON = 30.857
     </script>
 </head>
 <body onload="initialize()">
-    <h2 style="color:forestgreen">Antalya rent prices spatial distributions.</h2>
+    <h2 style="color:forestgreen">Izmir rent prices spatial distributions.</h2>
         <i>Data has been extracted from HepsiEmlak site, 31 of December, 2022</i>
     <div id=map-loading>Loading apartment prices and map of Antalya...</div>
     <div id="map_canvas" style="width:100%; height:100%"></div>
